@@ -24,6 +24,7 @@ PGUSER=... \
 ### Этап III
 
 * `POST /addresses` - добавляет в базу уже известный адрес, поля: `network_key` (обязательный, имя сети `eth-mainnet` и тп), `address` (обязательный), `private_key` (обязательный), `owner_kind` (обязательный, `user` или `system`)
+* `GET /vault_token` - возвращает `token accessor` и `ttl`
 
 ## Логирование
 
