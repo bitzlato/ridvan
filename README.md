@@ -23,10 +23,6 @@ PGUSER=... \
 
 * `POST /addresses/generate` - генерирует адрес в сети, сохраняет его в базе и возвращает его значение. поля:  `network_key` (обязательный, имя сети `eth-mainnet` и тп),`owner_kind` (обязательный, `user` или `system`)
 
-### ICEBOX
-
-* `POST /addresses` - добавляет в базу уже известный адрес, поля: `network_key` (обязательный, имя сети `eth-mainnet` и тп), `address` (обязательный), `private_key` (обязательный), `owner_kind` (обязательный, `user` или `system`)
-* `GET /vault_token` - возвращает `token accessor` и `ttl`
 
 ## Логирование
 
@@ -43,6 +39,11 @@ https://jsonapi.org
 ## Ошибки
 
 Ошибки шлюза возвращаются с соответсвующим HTTP статусом. Ошибки ноды возвращаются со статусом 201 и соответсвующей структурой данных содержащей эти ошибки.
+
+## Планы на будущее
+
+* `POST /addresses` - добавляет в базу уже известный адрес, поля: `network_key` (обязательный, имя сети `eth-mainnet` и тп), `address` (обязательный), `private_key` (обязательный), `owner_kind` (обязательный, `user` или `system`)
+* `GET /vault_token` - возвращает `token accessor` и `ttl`
 
 ---
 
