@@ -15,13 +15,15 @@ PGUSER=... \
 
 ## Список endpoint-ов
 
+### Этап I
+
 * `POST /transactions` - создаёт транзакцию, поля как в `sendrawtransaction`, поле `network_key` (обязательно), поле `node_id` ID ноды через которую надо отправить запрос (не обязательно, выбирается шлюзом автоматически). Возвращает id транзакции
 
 ### Этап II
 
 * `POST /addresses/generate` - генерирует адрес в сети, сохраняет его в базе и возвращает его значение. поля:  `network_key` (обязательный, имя сети `eth-mainnet` и тп),`owner_kind` (обязательный, `user` или `system`)
 
-### Этап III
+### ICEBOX
 
 * `POST /addresses` - добавляет в базу уже известный адрес, поля: `network_key` (обязательный, имя сети `eth-mainnet` и тп), `address` (обязательный), `private_key` (обязательный), `owner_kind` (обязательный, `user` или `system`)
 * `GET /vault_token` - возвращает `token accessor` и `ttl`
