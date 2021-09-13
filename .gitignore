@@ -1,0 +1,4 @@
+.vscode
+temp
+node_modules
+coverage

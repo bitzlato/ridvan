@@ -112,9 +112,6 @@ ALTER TABLE ONLY public.nodes
 -- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.schema_migrations
-    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
-
 
 --
 -- Name: index_addresses_on_address_and_network_key; Type: INDEX; Schema: public; Owner: -

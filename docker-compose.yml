@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+  app:
+    image: node:14-slim
+    environment:
+      PORT: 4444
+      VAULT_HOST: http://vault:8200
+      VAULT_TOKEN: changeme
+      PG_HOST: db
+      PG_PORT: 5432
+      PG_DATABASE: postgres
+      PG_USER: postgres
+      PG_PASSWORD: postgres
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on: [db, vault]
+    ports:
+      - '4444:4444'
+
+  db:
+    image: postgres:13.3
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - '5432:5432'
+
+  vault:
+    image: vault:1.8.2
+    volumes:
+      - vault_data:/vault
+      - ./config/vault:/tmp/policies
+    ports:
+      - '8200:8200'
+    environment:
+      SKIP_SETCAP: 1
+      VAULT_TOKEN: changemetoken
+      VAULT_DEV_ROOT_TOKEN_ID: changeme
+      VAULT_ADDR: http://0.0.0.0:8200
+
+volumes:
+  db_data:
+  vault_data:
