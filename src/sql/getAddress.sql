@@ -11,5 +11,6 @@ SELECT
 FROM
   addresses
 WHERE
+  network_key = ${network_key} AND
   address = ${address}
 ;

@@ -27,12 +27,15 @@ export default class Db {
 
   async getAddress({
     address,
+    network_key,
   }: {
     address: string;
+    network_key: string;
   }): Promise<DbAddressType | null> {
     const result = await this.pgpdb.oneOrNone<DbAddressType>(
       this.queryFiles.getAddress,
       {
+        network_key,
         address,
       }
     );

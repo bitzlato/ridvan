@@ -28,6 +28,7 @@ export default class HttpServer {
 
       const address = await this.db.getAddress({
         address: body.params.from as string,
+        network_key: body.network_key,
       });
 
       if (!address) {
