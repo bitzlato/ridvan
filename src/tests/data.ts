@@ -12,7 +12,7 @@ export const testAddress: DbAddressType = {
   address: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
   key_encrypted: '',
   owner_kind: 'user',
-  created_at: '',
+  created_at: '2021-09-10 19:15:33.243271',
 };
 
 export const testNode: DbNodeType = {

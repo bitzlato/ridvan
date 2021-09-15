@@ -1,3 +1,4 @@
+import { ErrorRequestHandler, RequestHandler } from 'express';
 import { TransactionConfig } from 'web3-core';
 
 export type Config = {
@@ -13,6 +14,9 @@ export type Config = {
     database: string;
     user: string;
     password: string;
+  };
+  bugsnag: {
+    apiKey: string;
   };
 };
 
@@ -38,3 +42,8 @@ export type DbNodeType = {
   created_at: string;
   updated_at: string;
 };
+
+export interface BugsnagPluginExpressResult {
+  errorHandler: ErrorRequestHandler;
+  requestHandler: RequestHandler;
+}

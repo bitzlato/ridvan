@@ -1,6 +1,8 @@
 import util from 'util';
 import { VaultOptions } from 'node-vault';
 import pgPromise from 'pg-promise';
+import Bugsnag from '@bugsnag/js';
+import BugsnagPluginExpress from '@bugsnag/plugin-express';
 
 import getConfig from './config';
 import { Config } from './types';
@@ -26,6 +28,17 @@ process.on('unhandledRejection', (reason, promise) => {
   console.log('Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
+
+Bugsnag.start({
+  apiKey: config.bugsnag.apiKey,
+  plugins: [BugsnagPluginExpress],
+});
+
+const bugsnag = Bugsnag.getPlugin('express');
+
+if (!bugsnag) {
+  throw new Error('bugsnag express plugin not found');
+}
 
 const vaultOptions: VaultOptions = {
   apiVersion: 'v1',
@@ -57,14 +70,10 @@ const httpServer = new HttpServer({
   port: config.port,
   vault,
   db,
+  bugsnag,
 });
 
 (async (): Promise<void> => {
-  await vault.initTransitSecretEngine({
-    type: 'transit',
-    encryptionKey: 'transit',
-    mount_point: 'transit',
-  });
   await httpServer.start();
 
   console.log('service started');

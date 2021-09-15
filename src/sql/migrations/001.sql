@@ -54,8 +54,8 @@ CREATE TABLE public.nodes (
     description character varying NOT NULL,
     network_key character varying NOT NULL,
     url character varying NOT NULL,
-    created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -126,3 +126,14 @@ CREATE UNIQUE INDEX index_addresses_on_address_and_network_key ON public.address
 
 CREATE UNIQUE INDEX index_nodes_on_url ON public.nodes USING btree (url);
 
+CREATE TABLE public.migrations (
+    id SERIAL PRIMARY KEY,
+    version character varying UNIQUE NOT NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO public.migrations (
+    version
+) VALUES (
+    '001'
+);

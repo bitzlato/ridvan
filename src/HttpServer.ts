@@ -2,7 +2,7 @@ import express, { Application } from 'express';
 
 import Vault from './Vault';
 import sendTransaction from './sendTransaction';
-import { TransactionsReqBody } from './types';
+import { BugsnagPluginExpressResult, TransactionsReqBody } from './types';
 import Db from './Db';
 
 export default class HttpServer {
@@ -10,13 +10,27 @@ export default class HttpServer {
   port: number;
   vault: Vault;
   db: Db;
+  bugsnag: BugsnagPluginExpressResult;
 
-  constructor({ port, vault, db }: { port: number; vault: Vault; db: Db }) {
+  constructor({
+    port,
+    vault,
+    db,
+    bugsnag,
+  }: {
+    port: number;
+    vault: Vault;
+    db: Db;
+    bugsnag: BugsnagPluginExpressResult;
+  }) {
     this.port = port;
     this.vault = vault;
     this.db = db;
+    this.bugsnag = bugsnag;
+
     this.app = express();
 
+    this.app.use(this.bugsnag.requestHandler);
     this.app.use(express.json());
 
     this.app.get('/', (req: any, res) => {
@@ -32,7 +46,10 @@ export default class HttpServer {
       });
 
       if (!address) {
-        return res.status(404).json({ message: 'address not found' });
+        return res.status(400).json({
+          errors: [{ title: 'address not found', detail: `address not found` }],
+          jsonapi: { version: '1.0' },
+        });
       }
 
       const node = await this.db.getNode({
@@ -41,7 +58,10 @@ export default class HttpServer {
       });
 
       if (!node) {
-        return res.status(404).json({ message: 'node not found' });
+        return res.status(400).json({
+          errors: [{ title: 'node not found', detail: 'node not found' }],
+          jsonapi: { version: '1.0' },
+        });
       }
 
       const pk = await this.vault.decrypt({
@@ -49,7 +69,7 @@ export default class HttpServer {
       });
 
       if (!pk) {
-        return res.status(500).json({ message: 'vault encrypt error' });
+        return res.status(500).json({ message: 'vault decrypt error' });
       }
 
       const response = await sendTransaction({
@@ -59,11 +79,19 @@ export default class HttpServer {
       });
 
       if (response.status !== 'OK') {
-        return res.status(500).json({ message: response.message });
+        return res.status(500).json({
+          errors: [{ title: 'sendTransaction error', detail: `...` }],
+          jsonapi: { version: '1.0' },
+        });
       }
 
-      return res.status(200).json({ tx_id: response.tx_id });
+      return res.status(200).json({
+        data: { type: 'transactions', attributes: response.data },
+        jsonapi: { version: '1.0' },
+      });
     });
+
+    this.app.use(this.bugsnag.errorHandler);
   }
 
   async start(): Promise<void> {

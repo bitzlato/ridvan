@@ -3,12 +3,12 @@ getNode
 */
 
 SELECT
-  id,
+  id::INTEGER,
   description,
   network_key,
   url,
-  created_at,
-  updated_at
+  to_json(created_at)#>>'{}' AS created_at,
+  to_json(updated_at)#>>'{}' AS updated_at
 FROM
   nodes
 WHERE

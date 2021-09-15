@@ -28,4 +28,7 @@ export default (): Config => ({
     user: env.get('PG_USER').required().asString(),
     password: env.get('PG_PASSWORD').required().asString(),
   },
+  bugsnag: {
+    apiKey: env.get('BUGSNAG_API_KEY').required().asString(),
+  },
 });

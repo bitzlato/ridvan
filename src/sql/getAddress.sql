@@ -7,7 +7,7 @@ SELECT
   address,
   key_encrypted,
   owner_kind,
-  created_at
+  to_json(created_at)#>>'{}' AS created_at
 FROM
   addresses
 WHERE

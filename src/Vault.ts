@@ -12,16 +12,12 @@ export default class Vault {
 
   async encrypt({ plaintext }: { plaintext: string }): Promise<string | null> {
     try {
-      const r = await this.client
-        .encryptData({
-          name: VAULT_TRANSIT_NAME,
-          plaintext: Buffer.from(plaintext).toString('base64'),
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      const response = await this.client.encryptData({
+        name: VAULT_TRANSIT_NAME,
+        plaintext: Buffer.from(plaintext).toString('base64'),
+      });
 
-      return r;
+      return response.data.ciphertext;
     } catch (error) {
       console.error(error);
       return null;
@@ -65,6 +61,7 @@ export default class Vault {
     });
     console.log('transit secret engine initialized');
   }
+
   async createSecretEngine({
     type,
     mount_point,
@@ -83,6 +80,7 @@ export default class Vault {
       .catch((error) => {
         console.error(error);
         if (!error.message?.includes('path is already in use')) {
+          console.log('createSecretEngine error', error.message);
           throw new Error(error);
         } else {
           console.log('secret engine already exists');

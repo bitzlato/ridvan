@@ -1,3 +1,4 @@
+import path from 'path';
 import pgPromise, { IDatabase } from 'pg-promise';
 import { VaultOptions } from 'node-vault';
 
@@ -6,7 +7,7 @@ import getConfig from '../config';
 import { Config } from '../types';
 import Vault from '../Vault';
 
-import { testAddress, testNode } from './data';
+import { testAddress, testNode, addressPk } from './data';
 
 let config: Config;
 
@@ -50,6 +51,24 @@ let db: Db;
 beforeAll(async () => {
   pgpdb = await createTestDatabase();
   db = new Db({ pgpdb });
+
+  await vault.initTransitSecretEngine({
+    type: 'transit',
+    encryptionKey: 'transit',
+    mount_point: 'transit',
+  });
+
+  return await pgpdb.tx(async (tx) => {
+    await db.runQueryFromFile(
+      path.resolve(__dirname, '../sql/migrations/001.sql'),
+      tx
+    );
+
+    await db.runQueryFromFile(
+      path.resolve(__dirname, '../sql/migrations/002.sql'),
+      tx
+    );
+  });
 });
 
 afterAll(async () => {
@@ -60,22 +79,47 @@ afterAll(async () => {
 });
 
 describe('Database', () => {
-  // test('add address', async () => {
-  //   expect.assertions(1);
-  // vault.encrypt(...)
-  //   const result = await db.addAddress({});
-  //   expect(result).toMatchObject({
-  //     ...result,
-  //     ...{
-  //       created_at: expect.any(String),
-  //     },
-  //   });
-  // });
+  test('add address', async () => {
+    expect.assertions(1);
+
+    const key_encrypted = await vault.encrypt({
+      plaintext: addressPk[testAddress.address],
+    });
+
+    if (!key_encrypted) {
+      throw new Error('vault encrypt error');
+    }
+
+    testAddress.key_encrypted = key_encrypted;
+
+    const result = await db.addAddress(testAddress);
+
+    expect(result).toMatchObject(result);
+  });
+
+  test('add node', async () => {
+    expect.assertions(1);
+
+    const result = await db.addNode({
+      description: testNode.description,
+      network_key: testNode.network_key,
+      url: testNode.url,
+    });
+
+    expect(result).toMatchObject({
+      ...result,
+      ...{
+        created_at: expect.any(String),
+        updated_at: expect.any(String),
+      },
+    });
+  });
 
   test('get address', async () => {
     expect.assertions(1);
     const address = await db.getAddress({
       address: testAddress.address,
+      network_key: testAddress.network_key,
     });
     expect(address).toMatchObject({
       ...testAddress,
@@ -96,6 +140,7 @@ describe('Database', () => {
       ...testNode,
       ...{
         created_at: expect.any(String),
+        updated_at: expect.any(String),
       },
     });
   });

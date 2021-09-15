@@ -1,6 +1,9 @@
 import axios from 'axios';
 import web3 from 'web3';
 import { TransactionConfig } from 'web3-core';
+import { JapiError, ErrorSerializer } from 'ts-japi';
+
+const PrimitiveErrorSerializer = new ErrorSerializer();
 
 export default async ({
   params,
@@ -11,7 +14,8 @@ export default async ({
   pk: string;
   nodeUrl: string;
 }): Promise<
-  { status: 'OK'; tx_id: string } | { status: 'ERROR'; message: string }
+  | { status: 'OK'; data: { tx_id: string } }
+  | { status: 'ERROR'; errors: Array<JapiError> }
 > => {
   try {
     const client = new web3(nodeUrl);
@@ -32,18 +36,27 @@ export default async ({
     });
 
     if (response.data.error) {
+      throw new Error('test error');
       return {
         status: 'ERROR',
-        message: `${response.data.error.message}`,
+        errors: [
+          {
+            title: 'eth_sendRawTransaction error',
+            detail: response.data.error.message,
+            meta: { nodeResponse: response.data },
+            stack: 'Error',
+          },
+        ],
       };
     }
 
-    return { status: 'OK', tx_id: response.data.result };
+    return { status: 'OK', data: { tx_id: response.data.result } };
   } catch (error) {
     console.log('sendTransaction error: ', error.message);
+    const errorDocument = PrimitiveErrorSerializer.serialize(error);
     return {
       status: 'ERROR',
-      message: error.message,
+      errors: errorDocument.errors,
     };
   }
 };
