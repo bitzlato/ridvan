@@ -10,7 +10,8 @@
     "build": "docker build -t ridvan .",
     "lint": "eslint './src/**/*.ts' && prettier --check './src/**/*.ts' && tsc",
     "dc:depends": "docker-compose up db vault && docker-compose down --remove-orphans",
-    "dev": "npm run lint && npm run build && docker-compose down --remove-orphans && docker-compose run --rm app npm start && docker-compose down --remove-orphans",
+    "dev": "npm run lint && docker-compose down --remove-orphans && docker-compose run --rm app npm start && docker-compose down --remove-orphans",
+    "dc:test": "npm run lint && docker-compose down --remove-orphans && docker-compose run --rm app npm run test && docker-compose down --remove-orphans",
     "container": "docker run --name ridvan --rm -i -t ridvan npm start"
   },
   "dependencies": {

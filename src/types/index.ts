@@ -4,7 +4,7 @@ import { TransactionConfig } from 'web3-core';
 export type Config = {
   port: number;
   vault: {
-    host: string;
+    endpoint: string;
     token: string;
     encryptionKey: string;
   };

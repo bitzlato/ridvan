@@ -23,7 +23,7 @@ try {
 
 const vaultOptions: VaultOptions = {
   apiVersion: 'v1',
-  endpoint: `http://${config.vault.host}:8200`,
+  endpoint: config.vault.endpoint,
   token: config.vault.token,
 };
 
