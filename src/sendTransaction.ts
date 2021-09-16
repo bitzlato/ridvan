@@ -1,7 +1,8 @@
-import axios from 'axios';
 import web3 from 'web3';
 import { TransactionConfig } from 'web3-core';
 import { JapiError, ErrorSerializer } from 'ts-japi';
+
+import request from './tools/request';
 
 const PrimitiveErrorSerializer = new ErrorSerializer();
 
@@ -24,7 +25,7 @@ export default async ({
       pk
     );
 
-    const response = await axios({
+    const response = await request({
       url: nodeUrl,
       method: 'POST',
       data: {
