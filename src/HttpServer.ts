@@ -1,5 +1,5 @@
 import express, { Application } from 'express';
-import { JapiError, ErrorSerializer } from 'ts-japi';
+import { ErrorSerializer } from 'ts-japi';
 
 import Vault from './Vault';
 import sendTransaction from './tools/sendTransaction';
@@ -10,7 +10,6 @@ import {
   TransactionsReqBody,
 } from './types';
 import Db from './Db';
-import { addressPk } from './tests/data';
 
 const PrimitiveErrorSerializer = new ErrorSerializer();
 
@@ -137,8 +136,18 @@ export default class HttpServer {
       try {
         const {
           network_key,
-          entropy,
-        }: { network_key: string; entropy?: string } = req.body;
+          owner_kind,
+        }: { network_key: string; owner_kind: 'user' | 'system' } = req.body;
+
+        if (!['user', 'system'].includes(owner_kind)) {
+          res.status(400).json({
+            errors: [
+              { title: 'owner_kind not valid', detail: 'owner_kind not valid' },
+            ],
+            jsonapi: { version: '1.0' },
+          });
+          return;
+        }
 
         const node = await this.db.getNode({
           network_key: network_key,
@@ -152,7 +161,7 @@ export default class HttpServer {
           return;
         }
 
-        const { address, privateKey } = generateAddress({ entropy });
+        const { address, privateKey } = generateAddress();
 
         const key_encrypted = await vault.encrypt({
           plaintext: privateKey,
@@ -167,7 +176,7 @@ export default class HttpServer {
           key_encrypted,
           created_at: new Date().toISOString(),
           network_key,
-          owner_kind: 'user',
+          owner_kind,
         });
 
         res.status(200).json({

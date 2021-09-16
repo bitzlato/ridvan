@@ -147,7 +147,7 @@ describe('HttpServer', () => {
 
     const response = await request
       .post('/addresses/generate')
-      .send({ network_key: 'ropsten' });
+      .send({ network_key: 'ropsten', owner_kind: 'user' });
 
     expect(response.status).toBe(200);
   });
