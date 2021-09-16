@@ -142,6 +142,16 @@ describe('HttpServer', () => {
     expect(response.status).toBe(200);
   });
 
+  test('POST /addresses/generate', async () => {
+    expect.assertions(1);
+
+    const response = await request
+      .post('/addresses/generate')
+      .send({ network_key: 'ropsten' });
+
+    expect(response.status).toBe(200);
+  });
+
   test('POST /transactions', async () => {
     expect.assertions(1);
 

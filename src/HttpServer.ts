@@ -2,13 +2,15 @@ import express, { Application } from 'express';
 import { JapiError, ErrorSerializer } from 'ts-japi';
 
 import Vault from './Vault';
-import sendTransaction from './sendTransaction';
+import sendTransaction from './tools/sendTransaction';
+import generateAddress from './tools/generateAddress';
 import {
   BugsnagPluginExpressResult,
   DbAddressType,
   TransactionsReqBody,
 } from './types';
 import Db from './Db';
+import { addressPk } from './tests/data';
 
 const PrimitiveErrorSerializer = new ErrorSerializer();
 
@@ -119,6 +121,54 @@ export default class HttpServer {
         const address: DbAddressType = req.body;
 
         const response = await this.db.addAddress(address);
+
+        res.status(200).json({
+          data: { type: 'addresses', attributes: response },
+          jsonapi: { version: '1.0' },
+        });
+        return;
+      } catch (error) {
+        const errorDocument = PrimitiveErrorSerializer.serialize(error);
+        res.status(500).json(errorDocument);
+      }
+    });
+
+    this.app.post('/addresses/generate', async (req, res) => {
+      try {
+        const {
+          network_key,
+          entropy,
+        }: { network_key: string; entropy?: string } = req.body;
+
+        const node = await this.db.getNode({
+          network_key: network_key,
+        });
+
+        if (!node) {
+          res.status(400).json({
+            errors: [{ title: 'node not found', detail: 'node not found' }],
+            jsonapi: { version: '1.0' },
+          });
+          return;
+        }
+
+        const { address, privateKey } = generateAddress({ entropy });
+
+        const key_encrypted = await vault.encrypt({
+          plaintext: privateKey,
+        });
+
+        if (!key_encrypted) {
+          throw new Error('vault encrypt error');
+        }
+
+        const response = await this.db.addAddress({
+          address,
+          key_encrypted,
+          created_at: new Date().toISOString(),
+          network_key,
+          owner_kind: 'user',
+        });
 
         res.status(200).json({
           data: { type: 'addresses', attributes: response },

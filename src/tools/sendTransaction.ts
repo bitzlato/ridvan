@@ -2,7 +2,7 @@ import web3 from 'web3';
 import { TransactionConfig } from 'web3-core';
 import { JapiError, ErrorSerializer } from 'ts-japi';
 
-import request from './tools/request';
+import request from './request';
 
 const PrimitiveErrorSerializer = new ErrorSerializer();
 
