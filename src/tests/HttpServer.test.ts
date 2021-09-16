@@ -74,11 +74,6 @@ const dbInit = async (): Promise<void> => {
     ...testAddress,
     ...{ address: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d' },
   });
-
-  await addAddress({
-    ...testAddress,
-    ...{ address: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22' },
-  });
 };
 
 let pgpdb: IDatabase<Record<string, unknown>>;
@@ -125,7 +120,29 @@ afterAll(async () => {
 });
 
 describe('HttpServer', () => {
-  test('create transaction', async () => {
+  test('POST /addresses', async () => {
+    expect.assertions(1);
+
+    const key_encrypted = await vault.encrypt({
+      plaintext: addressPk[testAddress.address],
+    });
+
+    if (!key_encrypted) {
+      throw new Error('vault encrypt error');
+    }
+
+    const response = await request.post('/addresses').send({
+      ...testAddress,
+      ...{
+        address: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
+        key_encrypted,
+      },
+    });
+
+    expect(response.status).toBe(200);
+  });
+
+  test('POST /transactions', async () => {
     expect.assertions(1);
 
     let response = await request.post('/transactions').send({

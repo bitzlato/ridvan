@@ -1,9 +1,16 @@
 import express, { Application } from 'express';
+import { JapiError, ErrorSerializer } from 'ts-japi';
 
 import Vault from './Vault';
 import sendTransaction from './sendTransaction';
-import { BugsnagPluginExpressResult, TransactionsReqBody } from './types';
+import {
+  BugsnagPluginExpressResult,
+  DbAddressType,
+  TransactionsReqBody,
+} from './types';
 import Db from './Db';
+
+const PrimitiveErrorSerializer = new ErrorSerializer();
 
 export default class HttpServer {
   app: Application;
@@ -42,62 +49,86 @@ export default class HttpServer {
     });
 
     this.app.post('/transactions', async (req, res) => {
-      const body: TransactionsReqBody = req.body;
+      try {
+        const body: TransactionsReqBody = req.body;
 
-      const address = await this.db.getAddress({
-        address: body.params.from as string,
-        network_key: body.network_key,
-      });
+        const address = await this.db.getAddress({
+          address: body.params.from as string,
+          network_key: body.network_key,
+        });
 
-      if (!address) {
-        res.status(400).json({
-          errors: [{ title: 'address not found', detail: `address not found` }],
+        if (!address) {
+          res.status(400).json({
+            errors: [
+              { title: 'address not found', detail: `address not found` },
+            ],
+            jsonapi: { version: '1.0' },
+          });
+          return;
+        }
+
+        const node = await this.db.getNode({
+          network_key: body.network_key,
+          node_id: body.node_id,
+        });
+
+        if (!node) {
+          res.status(400).json({
+            errors: [{ title: 'node not found', detail: 'node not found' }],
+            jsonapi: { version: '1.0' },
+          });
+          return;
+        }
+
+        const pk = await this.vault.decrypt({
+          ciphertext: address.key_encrypted,
+        });
+
+        if (!pk) {
+          res.status(500).json({ message: 'vault decrypt error' });
+          return;
+        }
+
+        const response = await sendTransaction({
+          params: body.params,
+          pk,
+          nodeUrl: node.url,
+        });
+
+        if (response.status !== 'OK') {
+          res.status(500).json({
+            errors: response.errors,
+            jsonapi: { version: '1.0' },
+          });
+          return;
+        }
+
+        res.status(200).json({
+          data: { type: 'transactions', attributes: response.data },
           jsonapi: { version: '1.0' },
         });
         return;
+      } catch (error) {
+        const errorDocument = PrimitiveErrorSerializer.serialize(error);
+        res.status(500).json(errorDocument);
       }
+    });
 
-      const node = await this.db.getNode({
-        network_key: body.network_key,
-        node_id: body.node_id,
-      });
+    this.app.post('/addresses', async (req, res) => {
+      try {
+        const address: DbAddressType = req.body;
 
-      if (!node) {
-        res.status(400).json({
-          errors: [{ title: 'node not found', detail: 'node not found' }],
+        const response = await this.db.addAddress(address);
+
+        res.status(200).json({
+          data: { type: 'addresses', attributes: response },
           jsonapi: { version: '1.0' },
         });
         return;
+      } catch (error) {
+        const errorDocument = PrimitiveErrorSerializer.serialize(error);
+        res.status(500).json(errorDocument);
       }
-
-      const pk = await this.vault.decrypt({
-        ciphertext: address.key_encrypted,
-      });
-
-      if (!pk) {
-        res.status(500).json({ message: 'vault decrypt error' });
-        return;
-      }
-
-      const response = await sendTransaction({
-        params: body.params,
-        pk,
-        nodeUrl: node.url,
-      });
-
-      if (response.status !== 'OK') {
-        res.status(500).json({
-          errors: response.errors,
-          jsonapi: { version: '1.0' },
-        });
-        return;
-      }
-
-      res.status(200).json({
-        data: { type: 'transactions', attributes: response.data },
-        jsonapi: { version: '1.0' },
-      });
-      return;
     });
 
     if (this.bugsnag) {
