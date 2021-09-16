@@ -36,7 +36,6 @@ export default async ({
     });
 
     if (response.data.error) {
-      throw new Error('test error');
       return {
         status: 'ERROR',
         errors: [

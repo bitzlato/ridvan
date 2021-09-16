@@ -10,7 +10,7 @@ export default class HttpServer {
   port: number;
   vault: Vault;
   db: Db;
-  bugsnag: BugsnagPluginExpressResult;
+  bugsnag?: BugsnagPluginExpressResult;
 
   constructor({
     port,
@@ -21,7 +21,7 @@ export default class HttpServer {
     port: number;
     vault: Vault;
     db: Db;
-    bugsnag: BugsnagPluginExpressResult;
+    bugsnag?: BugsnagPluginExpressResult;
   }) {
     this.port = port;
     this.vault = vault;
@@ -30,14 +30,18 @@ export default class HttpServer {
 
     this.app = express();
 
-    this.app.use(this.bugsnag.requestHandler);
+    if (this.bugsnag) {
+      this.app.use(this.bugsnag.requestHandler);
+    }
+
     this.app.use(express.json());
 
-    this.app.get('/', (req: any, res) => {
-      return res.json({ service: 'ridvan' });
+    this.app.get('/', (req, res) => {
+      res.json({ service: 'ridvan' });
+      return;
     });
 
-    this.app.post('/transactions', async (req: any, res) => {
+    this.app.post('/transactions', async (req, res) => {
       const body: TransactionsReqBody = req.body;
 
       const address = await this.db.getAddress({
@@ -46,10 +50,11 @@ export default class HttpServer {
       });
 
       if (!address) {
-        return res.status(400).json({
+        res.status(400).json({
           errors: [{ title: 'address not found', detail: `address not found` }],
           jsonapi: { version: '1.0' },
         });
+        return;
       }
 
       const node = await this.db.getNode({
@@ -58,10 +63,11 @@ export default class HttpServer {
       });
 
       if (!node) {
-        return res.status(400).json({
+        res.status(400).json({
           errors: [{ title: 'node not found', detail: 'node not found' }],
           jsonapi: { version: '1.0' },
         });
+        return;
       }
 
       const pk = await this.vault.decrypt({
@@ -69,7 +75,8 @@ export default class HttpServer {
       });
 
       if (!pk) {
-        return res.status(500).json({ message: 'vault decrypt error' });
+        res.status(500).json({ message: 'vault decrypt error' });
+        return;
       }
 
       const response = await sendTransaction({
@@ -79,19 +86,23 @@ export default class HttpServer {
       });
 
       if (response.status !== 'OK') {
-        return res.status(500).json({
-          errors: [{ title: 'sendTransaction error', detail: `...` }],
+        res.status(500).json({
+          errors: response.errors,
           jsonapi: { version: '1.0' },
         });
+        return;
       }
 
-      return res.status(200).json({
+      res.status(200).json({
         data: { type: 'transactions', attributes: response.data },
         jsonapi: { version: '1.0' },
       });
+      return;
     });
 
-    this.app.use(this.bugsnag.errorHandler);
+    if (this.bugsnag) {
+      this.app.use(this.bugsnag.errorHandler);
+    }
   }
 
   async start(): Promise<void> {

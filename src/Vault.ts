@@ -78,7 +78,6 @@ export default class Vault {
         description,
       })
       .catch((error) => {
-        console.error(error);
         if (!error.message?.includes('path is already in use')) {
           console.log('createSecretEngine error', error.message);
           throw new Error(error);
