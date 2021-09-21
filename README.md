@@ -2,6 +2,14 @@
 
 Light protecting secrets gateway to Ethereum nodes. Uses hashicorp vault to save encrypted private keys.
 
+## Подготовка к запуску и тестовый запуск
+
+```sh
+npm i
+
+npm run dockertest
+```
+
 ## Запуск
 
 ```bash

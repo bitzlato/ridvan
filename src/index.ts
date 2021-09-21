@@ -68,6 +68,7 @@ const db = new Db({
 
 const httpServer = new HttpServer({
   port: config.port,
+  config,
   vault,
   db,
   bugsnag,

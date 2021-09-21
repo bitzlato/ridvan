@@ -12,6 +12,7 @@ if (process.env.DEBUG) {
 
 export default (): Config => ({
   port: env.get('PORT').required().asPortNumber(),
+  tokenSecret: env.get('TOKEN_SECRET').required().asString(),
   vault: {
     endpoint: env.get('VAULT_ENDPOINT').required().asString(),
     token: env.get('VAULT_TOKEN').required().asString(),

@@ -1,11 +1,13 @@
 import express, { Application } from 'express';
 import { ErrorSerializer } from 'ts-japi';
+import jwt from 'jsonwebtoken';
 
 import Vault from './Vault';
 import sendTransaction from './tools/sendTransaction';
 import generateAddress from './tools/generateAddress';
 import {
   BugsnagPluginExpressResult,
+  Config,
   DbAddressType,
   TransactionsReqBody,
 } from './types';
@@ -15,6 +17,7 @@ const PrimitiveErrorSerializer = new ErrorSerializer();
 
 export default class HttpServer {
   app: Application;
+  config: Config;
   port: number;
   vault: Vault;
   db: Db;
@@ -22,16 +25,19 @@ export default class HttpServer {
 
   constructor({
     port,
+    config,
     vault,
     db,
     bugsnag,
   }: {
     port: number;
+    config: Config;
     vault: Vault;
     db: Db;
     bugsnag?: BugsnagPluginExpressResult;
   }) {
     this.port = port;
+    this.config = config;
     this.vault = vault;
     this.db = db;
     this.bugsnag = bugsnag;
@@ -43,6 +49,24 @@ export default class HttpServer {
     }
 
     this.app.use(express.json());
+
+    this.app.use('/', (req, res, next) => {
+      const authHeader = req.headers.authorization;
+
+      if (authHeader) {
+        const token = authHeader.split(' ')[1];
+
+        jwt.verify(token, this.config.tokenSecret, (err) => {
+          if (err) {
+            return res.sendStatus(403);
+          }
+
+          next();
+        });
+      } else {
+        res.sendStatus(401);
+      }
+    });
 
     this.app.get('/', (req, res) => {
       res.json({ service: 'ridvan' });
@@ -97,7 +121,7 @@ export default class HttpServer {
         });
 
         if (response.status !== 'OK') {
-          res.status(500).json({
+          res.status(response.code).json({
             errors: response.errors,
             jsonapi: { version: '1.0' },
           });

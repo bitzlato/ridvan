@@ -2,6 +2,7 @@ import path from 'path';
 import pgPromise, { IDatabase } from 'pg-promise';
 import { VaultOptions } from 'node-vault';
 import supertest, { SuperTest, Test } from 'supertest';
+import jwt from 'jsonwebtoken';
 
 import Db from '../Db';
 import getConfig from '../config';
@@ -79,6 +80,8 @@ const dbInit = async (): Promise<void> => {
 let pgpdb: IDatabase<Record<string, unknown>>;
 let db: Db;
 
+let token = '';
+
 beforeAll(async () => {
   pgpdb = await createTestDatabase();
   db = new Db({ pgpdb });
@@ -103,8 +106,11 @@ beforeAll(async () => {
 
   await dbInit();
 
+  token = jwt.sign({}, config.tokenSecret, { expiresIn: '1s' });
+
   const httpServer = new HttpServer({
     db,
+    config,
     port: 3000,
     vault,
   });
@@ -131,13 +137,16 @@ describe('HttpServer', () => {
       throw new Error('vault encrypt error');
     }
 
-    const response = await request.post('/addresses').send({
-      ...testAddress,
-      ...{
-        address: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
-        key_encrypted,
-      },
-    });
+    const response = await request
+      .post('/addresses')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ...testAddress,
+        ...{
+          address: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
+          key_encrypted,
+        },
+      });
 
     expect(response.status).toBe(200);
   });
@@ -147,6 +156,7 @@ describe('HttpServer', () => {
 
     const response = await request
       .post('/addresses/generate')
+      .set('Authorization', `Bearer ${token}`)
       .send({ network_key: 'ropsten', owner_kind: 'user' });
 
     expect(response.status).toBe(200);
@@ -155,26 +165,32 @@ describe('HttpServer', () => {
   test('POST /transactions', async () => {
     expect.assertions(1);
 
-    let response = await request.post('/transactions').send({
-      network_key: 'ropsten',
-      params: {
-        to: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
-        from: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
-        value: '21100000000000000',
-        gas: '21000',
-      },
-    });
-
-    if (response.status !== 200) {
-      response = await request.post('/transactions').send({
+    let response = await request
+      .post('/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
         network_key: 'ropsten',
         params: {
-          to: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
-          from: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
-          value: '21100000000000000',
+          to: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
+          from: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
+          value: '10000000000000',
           gas: '21000',
         },
       });
+
+    if (response.status !== 200) {
+      response = await request
+        .post('/transactions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          network_key: 'ropsten',
+          params: {
+            to: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
+            from: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
+            value: '10000000000000',
+            gas: '21000',
+          },
+        });
     }
     expect(response.status).toBe(200);
   });
