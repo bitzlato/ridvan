@@ -126,6 +126,16 @@ afterAll(async () => {
 });
 
 describe('HttpServer', () => {
+  test('GET /vault_token', async () => {
+    expect.assertions(1);
+
+    const response = await request
+      .get('/vault_token')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+  });
+
   test('POST /addresses', async () => {
     expect.assertions(1);
 

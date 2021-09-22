@@ -110,4 +110,36 @@ export default class Vault {
 
     console.log('encryption key initialized');
   }
+
+  async getVaultTokenAccessor(): Promise<{
+    accessor: string;
+    ttl: number;
+  } | null> {
+    try {
+      const response: {
+        data: {
+          data: {
+            accessor: string;
+            ttl: number;
+          };
+        };
+      } = await axios({
+        url: `${this.client.endpoint}/v1/auth/token/lookup`,
+        method: 'POST',
+        headers: {
+          'X-Vault-Token': this.client.token,
+        },
+        data: {
+          token: this.client.token,
+        },
+      });
+      return {
+        accessor: response.data.data.accessor,
+        ttl: response.data.data.ttl,
+      };
+    } catch (error) {
+      console.log(error.message);
+      return null;
+    }
+  }
 }

@@ -73,6 +73,19 @@ export default class HttpServer {
       return;
     });
 
+    this.app.get('/vault_token', async (req, res) => {
+      const response = await vault.getVaultTokenAccessor();
+
+      if (response) {
+        return res.status(200).json({
+          data: { type: 'vault_token', attributes: response },
+          jsonapi: { version: '1.0' },
+        });
+      }
+      res.sendStatus(500);
+      return;
+    });
+
     this.app.post('/transactions', async (req, res) => {
       try {
         const body: TransactionsReqBody = req.body;
