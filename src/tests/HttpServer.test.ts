@@ -106,7 +106,7 @@ beforeAll(async () => {
 
   await dbInit();
 
-  token = jwt.sign({}, config.tokenSecret, { expiresIn: '1s' });
+  token = jwt.sign({}, config.tokenSecret, { expiresIn: '10s' });
 
   const httpServer = new HttpServer({
     db,
@@ -129,13 +129,7 @@ describe('HttpServer', () => {
   test('POST /addresses', async () => {
     expect.assertions(1);
 
-    const key_encrypted = await vault.encrypt({
-      plaintext: addressPk[testAddress.address],
-    });
-
-    if (!key_encrypted) {
-      throw new Error('vault encrypt error');
-    }
+    const address = '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22';
 
     const response = await request
       .post('/addresses')
@@ -143,8 +137,8 @@ describe('HttpServer', () => {
       .send({
         ...testAddress,
         ...{
-          address: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
-          key_encrypted,
+          address,
+          pk: addressPk[address],
         },
       });
 

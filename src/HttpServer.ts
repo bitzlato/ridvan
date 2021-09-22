@@ -141,9 +141,28 @@ export default class HttpServer {
 
     this.app.post('/addresses', async (req, res) => {
       try {
-        const address: DbAddressType = req.body;
+        const address: {
+          created_at: string;
+          network_key: string;
+          address: string;
+          pk: string;
+          owner_kind: string;
+        } = req.body;
 
-        const response = await this.db.addAddress(address);
+        const key_encrypted = await vault.encrypt({
+          plaintext: address.pk,
+        });
+
+        if (!key_encrypted) {
+          throw new Error('vault encrypt error');
+        }
+
+        const response = await this.db.addAddress({
+          ...address,
+          ...{
+            key_encrypted,
+          },
+        });
 
         res.status(200).json({
           data: { type: 'addresses', attributes: response },
