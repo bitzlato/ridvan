@@ -106,7 +106,7 @@ beforeAll(async () => {
 
   await dbInit();
 
-  token = jwt.sign({}, config.tokenSecret, { expiresIn: '10s' });
+  token = jwt.sign({}, config.tokenSecret, { expiresIn: '1m' });
 
   const httpServer = new HttpServer({
     db,
