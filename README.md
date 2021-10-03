@@ -13,7 +13,7 @@ npm run dockertest
 ## Запуск
 
 ```bash
-PORT=4445 \
+PORT=4444 \
 TOKEN_SECRET=somesecret \
 VAULT_ENDPOINT=http://localhost:8200 \
 VAULT_TOKEN=changeme \
