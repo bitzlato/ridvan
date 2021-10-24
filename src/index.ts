@@ -46,7 +46,10 @@ const vaultOptions: VaultOptions = {
   token: config.vault.token,
 };
 
-const vault = new Vault({ options: vaultOptions });
+const vault = new Vault({
+  options: vaultOptions,
+  encryptionKey: config.vault.encryptionKey,
+});
 
 const pgp = pgPromise({
   error: (err: Error) => {

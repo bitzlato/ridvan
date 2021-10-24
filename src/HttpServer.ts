@@ -74,7 +74,7 @@ export default class HttpServer {
     });
 
     this.app.get('/vault_token', async (req, res) => {
-      const response = await vault.getVaultTokenAccessor();
+      const response = await vault.getSelfVaultTokenAccessor();
 
       if (response) {
         return res.status(200).json({
