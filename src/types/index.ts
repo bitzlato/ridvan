@@ -7,7 +7,7 @@ export type Config = {
   vault: {
     endpoint: string;
     token: string;
-    devRootToken: string;
+    devRootToken?: string;
     encryptionKey: string;
   };
   pg: {

@@ -16,7 +16,7 @@ export default (): Config => ({
   vault: {
     endpoint: env.get('VAULT_ENDPOINT').required().asString(),
     token: env.get('VAULT_TOKEN').required().asString(),
-    devRootToken: env.get('VAULT_DEV_ROOT_TOKEN').required().asString(),
+    devRootToken: env.get('VAULT_DEV_ROOT_TOKEN').asString(),
     encryptionKey: env
       .get('VAULT_ENCRYPTION_KEY')
       .default('ridvan_address')

@@ -10,6 +10,22 @@ npm i
 npm run dockertest
 ```
 
+## Vault policy
+
+```hcl
+path "transit/keys/ridvan_*" {
+  capabilities = ["create", "read", "list"]
+}
+
+path "transit/encrypt/ridvan_*" {
+  capabilities = ["create", "read", "update"]
+}
+
+path "transit/decrypt/ridvan_*" {
+  capabilities = ["create", "read", "update"]
+}
+```
+
 ## Запуск
 
 ```bash
@@ -17,7 +33,7 @@ PORT=4444 \
 TOKEN_SECRET=somesecret \
 VAULT_ENDPOINT=http://localhost:8200 \
 VAULT_TOKEN=changeme \
-VAULT_ENCRYPTION_KEY=transit \
+VAULT_ENCRYPTION_KEY=ridvan_address \
 PG_HOST=localhost \
 PG_PORT=5432 \
 PG_DATABASE=postgres \
