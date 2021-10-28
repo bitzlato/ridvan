@@ -2,6 +2,7 @@ import path from 'path';
 import pgPromise, { IDatabase } from 'pg-promise';
 import { VaultOptions } from 'node-vault';
 import supertest, { SuperTest, Test } from 'supertest';
+import jwt from 'jsonwebtoken';
 
 import Db from '../Db';
 import getConfig from '../config';
@@ -21,13 +22,27 @@ try {
   process.exit(1);
 }
 
+const vaultRootOptions: VaultOptions = {
+  apiVersion: 'v1',
+  endpoint: config.vault.endpoint,
+  token: config.vault.devRootToken,
+};
+
+const vaultRoot = new Vault({
+  options: vaultRootOptions,
+  encryptionKey: config.vault.encryptionKey,
+});
+
 const vaultOptions: VaultOptions = {
   apiVersion: 'v1',
   endpoint: config.vault.endpoint,
   token: config.vault.token,
 };
 
-const vault = new Vault({ options: vaultOptions });
+let vault = new Vault({
+  options: vaultOptions,
+  encryptionKey: config.vault.encryptionKey,
+});
 
 const pgp = pgPromise({});
 
@@ -79,14 +94,38 @@ const dbInit = async (): Promise<void> => {
 let pgpdb: IDatabase<Record<string, unknown>>;
 let db: Db;
 
+let token = '';
+
 beforeAll(async () => {
   pgpdb = await createTestDatabase();
   db = new Db({ pgpdb });
 
-  await vault.initTransitSecretEngine({
+  await vaultRoot.initTransitSecretEngine({
     type: 'transit',
-    encryptionKey: 'transit',
+    encryptionKey: 'ridvan_address',
     mount_point: 'transit',
+  });
+
+  await vaultRoot.createPolicy({
+    policyName: 'ridvan-transit',
+    policy:
+      'path "transit/keys/ridvan_*" {\n capabilities = ["create", "read","list"]\n}\n\npath "transit/encrypt/ridvan_*" {\n capabilities = ["create", "read","update"]\n}\n\npath "transit/decrypt/ridvan_*" {\n capabilities = ["create", "read","update"]\n}\n',
+  });
+
+  const { token: client_token } = await vaultRoot.createToken({
+    policies: ['ridvan-transit'],
+    renewable: true,
+    ttl: '5m',
+    user: 'test',
+  });
+
+  vault = new Vault({
+    options: {
+      apiVersion: 'v1',
+      endpoint: config.vault.endpoint,
+      token: client_token,
+    },
+    encryptionKey: config.vault.encryptionKey,
   });
 
   await pgpdb.tx(async (tx) => {
@@ -103,8 +142,11 @@ beforeAll(async () => {
 
   await dbInit();
 
+  token = jwt.sign({}, config.tokenSecret, { expiresIn: '10m' });
+
   const httpServer = new HttpServer({
     db,
+    config,
     port: 3000,
     vault,
   });
@@ -120,24 +162,31 @@ afterAll(async () => {
 });
 
 describe('HttpServer', () => {
+  test('GET /vault_token', async () => {
+    expect.assertions(1);
+
+    const response = await request
+      .get('/vault_token')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+  });
+
   test('POST /addresses', async () => {
     expect.assertions(1);
 
-    const key_encrypted = await vault.encrypt({
-      plaintext: addressPk[testAddress.address],
-    });
+    const address = '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22';
 
-    if (!key_encrypted) {
-      throw new Error('vault encrypt error');
-    }
-
-    const response = await request.post('/addresses').send({
-      ...testAddress,
-      ...{
-        address: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
-        key_encrypted,
-      },
-    });
+    const response = await request
+      .post('/addresses')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ...testAddress,
+        ...{
+          address,
+          pk: addressPk[address],
+        },
+      });
 
     expect(response.status).toBe(200);
   });
@@ -147,6 +196,7 @@ describe('HttpServer', () => {
 
     const response = await request
       .post('/addresses/generate')
+      .set('Authorization', `Bearer ${token}`)
       .send({ network_key: 'ropsten', owner_kind: 'user' });
 
     expect(response.status).toBe(200);
@@ -155,26 +205,32 @@ describe('HttpServer', () => {
   test('POST /transactions', async () => {
     expect.assertions(1);
 
-    let response = await request.post('/transactions').send({
-      network_key: 'ropsten',
-      params: {
-        to: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
-        from: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
-        value: '21100000000000000',
-        gas: '21000',
-      },
-    });
-
-    if (response.status !== 200) {
-      response = await request.post('/transactions').send({
+    let response = await request
+      .post('/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
         network_key: 'ropsten',
         params: {
-          to: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
-          from: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
-          value: '21100000000000000',
+          to: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
+          from: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
+          value: '10000000000000',
           gas: '21000',
         },
       });
+
+    if (response.status !== 200) {
+      response = await request
+        .post('/transactions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          network_key: 'ropsten',
+          params: {
+            to: '0xD80a740Bd99f2e45539CB7f015A5cd63320E3d22',
+            from: '0xbc68B88775B929b7e11bd6cdb213A4bd7A8eeD9d',
+            value: '10000000000000',
+            gas: '21000',
+          },
+        });
     }
     expect(response.status).toBe(200);
   });

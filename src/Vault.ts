@@ -1,19 +1,25 @@
 import vault, { client, VaultOptions } from 'node-vault';
 import axios from 'axios';
 
-const VAULT_TRANSIT_NAME = 'transit';
-
 export default class Vault {
   private client: client;
+  private encryptionKey: string;
 
-  constructor({ options }: { options: VaultOptions }) {
+  constructor({
+    options,
+    encryptionKey,
+  }: {
+    options: VaultOptions;
+    encryptionKey: string;
+  }) {
     this.client = vault(options);
+    this.encryptionKey = encryptionKey;
   }
 
   async encrypt({ plaintext }: { plaintext: string }): Promise<string | null> {
     try {
       const response = await this.client.encryptData({
-        name: VAULT_TRANSIT_NAME,
+        name: this.encryptionKey,
         plaintext: Buffer.from(plaintext).toString('base64'),
       });
 
@@ -31,7 +37,7 @@ export default class Vault {
   }): Promise<string | null> {
     try {
       const response = await this.client.decryptData({
-        name: VAULT_TRANSIT_NAME,
+        name: this.encryptionKey,
         ciphertext,
       });
 
@@ -71,7 +77,7 @@ export default class Vault {
     mount_point: string;
     description?: string;
   }): Promise<void> {
-    const response = await this.client
+    await this.client
       .mount({
         mount_point,
         type,
@@ -109,5 +115,129 @@ export default class Vault {
     }
 
     console.log('encryption key initialized');
+  }
+
+  async getVaultTokenAccessor(): Promise<{
+    accessor: string;
+    ttl: number;
+  } | null> {
+    try {
+      const response: {
+        data: {
+          data: {
+            accessor: string;
+            ttl: number;
+          };
+        };
+      } = await axios({
+        url: `${this.client.endpoint}/v1/auth/token/lookup`,
+        method: 'POST',
+        headers: {
+          'X-Vault-Token': this.client.token,
+        },
+        data: {
+          token: this.client.token,
+        },
+      });
+      return {
+        accessor: response.data.data.accessor,
+        ttl: response.data.data.ttl,
+      };
+    } catch (error) {
+      console.log(error.message);
+      return null;
+    }
+  }
+
+  async getSelfVaultTokenAccessor(): Promise<{
+    accessor: string;
+    ttl: number;
+  } | null> {
+    try {
+      const response: {
+        data: {
+          data: {
+            accessor: string;
+            ttl: number;
+          };
+        };
+      } = await axios({
+        url: `${this.client.endpoint}/v1/auth/token/lookup-self`,
+        method: 'GET',
+        headers: {
+          'X-Vault-Token': this.client.token,
+        },
+      });
+      return {
+        accessor: response.data.data.accessor,
+        ttl: response.data.data.ttl,
+      };
+    } catch (error) {
+      console.log(error.message);
+      return null;
+    }
+  }
+
+  async createPolicy({
+    policyName,
+    policy,
+  }: {
+    policyName: string;
+    policy: string;
+  }): Promise<void> {
+    try {
+      await axios({
+        url: `${this.client.endpoint}/v1/sys/policies/acl/${policyName}`,
+        method: 'PUT',
+        headers: {
+          'X-Vault-Token': this.client.token,
+        },
+        data: {
+          policy,
+        },
+      });
+    } catch (error) {
+      console.log(error.message);
+      throw new Error(error);
+    }
+  }
+
+  async createToken({
+    policies,
+    user,
+    ttl,
+    renewable,
+  }: {
+    policies: Array<string>;
+    user: string;
+    ttl: string;
+    renewable: boolean;
+  }): Promise<{ token: string }> {
+    try {
+      const response: {
+        data: {
+          auth: {
+            client_token: string;
+          };
+        };
+      } = await axios({
+        url: `${this.client.endpoint}/v1/auth/token/create`,
+        method: 'PUT',
+        headers: {
+          'X-Vault-Token': this.client.token,
+        },
+        data: {
+          policies,
+          meta: { user },
+          ttl,
+          renewable,
+        },
+      });
+
+      return { token: response.data.auth.client_token };
+    } catch (error) {
+      console.log(error.message);
+      throw new Error(error);
+    }
   }
 }

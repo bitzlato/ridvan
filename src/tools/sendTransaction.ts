@@ -16,7 +16,7 @@ export default async ({
   nodeUrl: string;
 }): Promise<
   | { status: 'OK'; data: { tx_id: string } }
-  | { status: 'ERROR'; errors: Array<JapiError> }
+  | { status: 'ERROR'; code: number; errors: Array<JapiError> }
 > => {
   try {
     const client = new web3(nodeUrl);
@@ -39,6 +39,7 @@ export default async ({
     if (response.data.error) {
       return {
         status: 'ERROR',
+        code: 201,
         errors: [
           {
             title: 'eth_sendRawTransaction error',
@@ -56,6 +57,7 @@ export default async ({
     const errorDocument = PrimitiveErrorSerializer.serialize(error);
     return {
       status: 'ERROR',
+      code: 500,
       errors: errorDocument.errors,
     };
   }

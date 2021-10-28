@@ -18,13 +18,27 @@ try {
   process.exit(1);
 }
 
+const vaultRootOptions: VaultOptions = {
+  apiVersion: 'v1',
+  endpoint: config.vault.endpoint,
+  token: config.vault.devRootToken,
+};
+
+const vaultRoot = new Vault({
+  options: vaultRootOptions,
+  encryptionKey: config.vault.encryptionKey,
+});
+
 const vaultOptions: VaultOptions = {
   apiVersion: 'v1',
   endpoint: config.vault.endpoint,
   token: config.vault.token,
 };
 
-const vault = new Vault({ options: vaultOptions });
+let vault = new Vault({
+  options: vaultOptions,
+  encryptionKey: config.vault.encryptionKey,
+});
 
 const pgp = pgPromise({});
 
@@ -52,10 +66,32 @@ beforeAll(async () => {
   pgpdb = await createTestDatabase();
   db = new Db({ pgpdb });
 
-  await vault.initTransitSecretEngine({
+  await vaultRoot.initTransitSecretEngine({
     type: 'transit',
-    encryptionKey: 'transit',
+    encryptionKey: 'ridvan_address',
     mount_point: 'transit',
+  });
+
+  await vaultRoot.createPolicy({
+    policyName: 'ridvan-transit',
+    policy:
+      'path "transit/keys/ridvan_*" {\n capabilities = ["create", "read","list"]\n}\n\npath "transit/encrypt/ridvan_*" {\n capabilities = ["create", "read","update"]\n}\n\npath "transit/decrypt/ridvan_*" {\n capabilities = ["create", "read","update"]\n}\n',
+  });
+
+  const { token } = await vaultRoot.createToken({
+    policies: ['ridvan-transit'],
+    renewable: true,
+    ttl: '5m',
+    user: 'test',
+  });
+
+  vault = new Vault({
+    options: {
+      apiVersion: 'v1',
+      endpoint: config.vault.endpoint,
+      token,
+    },
+    encryptionKey: config.vault.encryptionKey,
   });
 
   return await pgpdb.tx(async (tx) => {

@@ -3,9 +3,11 @@ import { TransactionConfig } from 'web3-core';
 
 export type Config = {
   port: number;
+  tokenSecret: string;
   vault: {
     endpoint: string;
     token: string;
+    devRootToken?: string;
     encryptionKey: string;
   };
   pg: {
